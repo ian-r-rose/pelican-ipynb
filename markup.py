@@ -116,9 +116,10 @@ class MyHTMLParser(HTMLReader._HTMLParser):
     def __init__(self, settings, filename):
         HTMLReader._HTMLParser.__init__(self, settings, filename)
         self.settings = settings
-        self.filename = filename
-        self.wordcount = 0
-        self.summary = None
+        self.summary = ''
+        self._wordcount = 0
+        self._summarized = False
+        self._pending = False
 
         self.stop_tags = [('div', ('class', 'input')), ('div', ('class', 'output')), ('h2', ('id', 'Header-2'))]
         if 'IPYNB_STOP_SUMMARY_TAGS' in self.settings.keys():
@@ -129,19 +130,35 @@ class MyHTMLParser(HTMLReader._HTMLParser):
     def handle_starttag(self, tag, attrs):
         HTMLReader._HTMLParser.handle_starttag(self, tag, attrs)
 
-        if self.wordcount < self.settings['SUMMARY_MAX_LENGTH']:
+        if self._summarized == False:
             mask = [stoptag[0] == tag and (stoptag[1] is None or stoptag[1] in attrs) for stoptag in self.stop_tags]
             if any(mask):
-                self.summary = self._data_buffer
-                self.wordcount = self.settings['SUMMARY_MAX_LENGTH']
+                self._pending = False
+                self._summarized = True
+            else:
+                self.summary += self.get_starttag_text()
+                self._pending = True
+
+    def handle_data(self, data):
+        HTMLReader._HTMLParser.handle_data(self, data)
+
+        if self._summarized == False:
+            data_wordcount = len(data.split())
+            if self._wordcount + data_wordcount < self.settings['SUMMARY_MAX_LENGTH']:
+                self.summary += data
+                self._wordcount += data_wordcount
+            else:
+                partial_length = self.settings['SUMMARY_MAX_LENGTH'] - self._wordcount
+                part = data.split()[:partial_length]
+                self.summary += ' '.join(part) + u' \u2026'
+                self._summarized = True
 
     def handle_endtag(self, tag):
         HTMLReader._HTMLParser.handle_endtag(self, tag)
 
-        if self.wordcount < self.settings['SUMMARY_MAX_LENGTH']:
-            self.wordcount = len(strip_tags(self._data_buffer).split(' '))
-            if self.wordcount >= self.settings['SUMMARY_MAX_LENGTH']:
-                self.summary = self._data_buffer
+        if self._pending == True:
+            self.summary += '</' + tag + '>'
+            self._pending = False
 
 
 def strip_tags(html):
