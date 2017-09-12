@@ -82,8 +82,8 @@ def get_html_from_filepath(filepath, start=0, end=None):
     """Convert ipython notebook to html
     Return: html content of the converted notebook
     """
-    config = Config({'CSSHTMLHeaderTransformer': {'enabled': True,
-                     'highlight_class': '.highlight-ipynb'},
+    config = Config({'TemplateExporter': { 'exclude_input_prompt': True,
+                                           'exclude_output_prompt': True },
                      'SubCell': {'enabled':True, 'start':start, 'end':end}})
     exporter = HTMLExporter(config=config, template_file='basic',
                             filters={'highlight2html': custom_highlighter},
