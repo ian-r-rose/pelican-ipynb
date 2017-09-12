@@ -5,6 +5,8 @@ from __future__ import absolute_import, print_function, division
 
 import re
 
+import jinja2
+
 import IPython
 try:
     # Jupyter
@@ -85,7 +87,20 @@ def get_html_from_filepath(filepath, start=0, end=None):
     config = Config({'TemplateExporter': { 'exclude_input_prompt': True,
                                            'exclude_output_prompt': True },
                      'SubCell': {'enabled':True, 'start':start, 'end':end}})
-    exporter = HTMLExporter(config=config, template_file='basic',
+    css_hack = """
+    {%- extends 'basic.tpl' -%}
+    {%- block header -%}
+    {{ super() }}
+    <style type="text/css">
+    .cell .input {
+      overflow: hidden;
+    }
+    </style>
+    {%- endblock -%}
+    """
+    loader = jinja2.DictLoader({ 'pelican_ipynb.tpl': css_hack })
+    exporter = HTMLExporter(config=config, template_file='pelican_ipynb.tpl',
+                            extra_loaders = [loader],
                             filters={'highlight2html': custom_highlighter},
                             preprocessors=[SubCell])
     content, info = exporter.from_filename(filepath)
