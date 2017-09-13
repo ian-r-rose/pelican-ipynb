@@ -92,8 +92,13 @@ def get_html_from_filepath(filepath, start=0, end=None):
     {%- block header -%}
     {{ super() }}
     <style type="text/css">
-    .cell .input {
-      overflow: hidden;
+
+    div.output_area .MathJax_Display {
+      text-align: center !important;
+    }
+
+    div.output_area {
+      justify-content: center;
     }
     </style>
     {%- endblock -%}
